@@ -188,27 +188,41 @@ function animateCounter(element, start, end, duration) {
     window.requestAnimationFrame(step);
 }
 
-// ===== FUNCIÓN PARA EXTRAER NÚMEROS DE PRECIOS =====
+// ===== FUNCIÓN PARA EXTRAER NÚMEROS DE PRECIOS (MEJORADA PARA GITHUB) =====
 function extractPriceNumber(priceText) {
-    // Remover símbolos de moneda y espacios, mantener solo números y comas/puntos
-    const cleanText = priceText.replace(/[₡$]/g, '').trim();
+    if (!priceText || typeof priceText !== 'string') {
+        console.warn('Texto de precio inválido:', priceText);
+        return null;
+    }
+
+    // Normalizar el texto removiendo caracteres especiales y espacios extra
+    let cleanText = priceText.toString().trim();
     
-    // Buscar patrones de números con separadores
-    const patterns = [
-        /(\d{1,3}(?:,\d{3})+)/, // Formato: 1,000 o 10,000
-        /(\d{1,3}(?:\.\d{3})+)/, // Formato: 1.000 o 10.000
-        /(\d+)/                  // Cualquier secuencia de dígitos
-    ];
+    // Remover símbolos de moneda comunes
+    cleanText = cleanText.replace(/[₡$€£¥]/g, '');
     
-    for (let pattern of patterns) {
-        const match = cleanText.match(pattern);
-        if (match) {
-            // Remover separadores y convertir a número
-            const numberStr = match[1].replace(/[,\.]/g, '');
-            const number = parseInt(numberStr);
-            if (!isNaN(number) && number > 0) {
-                return number;
-            }
+    // Remover palabras comunes que no son números
+    cleanText = cleanText.replace(/desde|from|price|precio|colones|dollars|euros/gi, '');
+    
+    // Buscar el primer grupo de números consecutivos (puede incluir separadores)
+    const numberMatch = cleanText.match(/(\d{1,3}(?:[,\.]\d{3})*|\d+)/);
+    
+    if (numberMatch) {
+        // Limpiar separadores y convertir
+        const numberStr = numberMatch[1].replace(/[,\.]/g, '');
+        const number = parseInt(numberStr, 10);
+        
+        if (!isNaN(number) && number > 0) {
+            return number;
+        }
+    }
+    
+    // Intento alternativo: buscar cualquier secuencia de dígitos
+    const fallbackMatch = cleanText.match(/\d+/);
+    if (fallbackMatch) {
+        const number = parseInt(fallbackMatch[0], 10);
+        if (!isNaN(number) && number > 0) {
+            return number;
         }
     }
     
@@ -220,21 +234,27 @@ function initPriceAnimations() {
     const priceObserver = new IntersectionObserver(function(entries) {
         entries.forEach(entry => {
             if (entry.isIntersecting && !entry.target.dataset.animated) {
-                const priceText = entry.target.textContent;
-                const priceNumber = extractPriceNumber(priceText);
+                entry.target.dataset.animated = 'true';
                 
-                if (priceNumber !== null) {
-                    entry.target.dataset.animated = 'true';
-                    entry.target.dataset.originalFormat = priceText;
-                    animatePriceValue(entry.target, 0, priceNumber, 1500, priceText);
-                } else {
-                    console.warn('No se pudo extraer un número válido de:', priceText);
-                    // Mantener el texto original sin animación
-                    entry.target.dataset.animated = 'true';
+                try {
+                    const priceText = entry.target.textContent || entry.target.innerText || '';
+                    console.log('Procesando precio:', priceText);
+                    
+                    const priceNumber = extractPriceNumber(priceText);
+                    console.log('Número extraído:', priceNumber);
+                    
+                    if (priceNumber !== null && priceNumber > 0) {
+                        entry.target.dataset.originalFormat = priceText;
+                        animatePriceValue(entry.target, 0, priceNumber, 1500, priceText);
+                    } else {
+                        console.warn('No se pudo extraer número válido de:', priceText);
+                    }
+                } catch (error) {
+                    console.error('Error procesando precio:', error, entry.target);
                 }
             }
         });
-    }, { threshold: 0.5 });
+    }, { threshold: 0.3, rootMargin: '50px' });
 
     // Observar estadÃ­sticas para animarlas
     document.querySelectorAll('.stat-item h4').forEach((stat, index) => {
@@ -245,10 +265,10 @@ function initPriceAnimations() {
                     const text = entry.target.textContent;
                     
                     setTimeout(() => {
-                        if (text.includes('500')) {
-                            animateCounter(entry.target, 0, 500, 2000);
-                        } else if (text.includes('13')) {
-                            animateCounter(entry.target, 0, 13, 1500);
+                        if (text.includes('500') || text.includes('100')) {
+                            animateCounter(entry.target, 0, 100, 2000);
+                        } else if (text.includes('13') || text.includes('10')) {
+                            animateCounter(entry.target, 0, 10, 1500);
                         } else if (text.includes('24')) {
                             animateCounter(entry.target, 0, 24, 1000);
                         }
@@ -260,9 +280,14 @@ function initPriceAnimations() {
         observer.observe(stat);
     });
 
-    document.querySelectorAll('.price').forEach(price => {
-        priceObserver.observe(price);
-    });
+    // Agregar pequeño delay para asegurar que los elementos estén cargados
+    setTimeout(() => {
+        document.querySelectorAll('.price').forEach(price => {
+            if (price) {
+                priceObserver.observe(price);
+            }
+        });
+    }, 100);
 }
 
 function animatePriceValue(element, start, end, duration, originalFormat) {
