@@ -194,14 +194,15 @@ function initPriceAnimations() {
         entries.forEach(entry => {
             if (entry.isIntersecting && !entry.target.dataset.animated) {
                 const priceText = entry.target.textContent;
-                const priceNumber = parseInt(priceText.replace(/[₡,\s]/g, ''));
+                // Elimina TODO lo que no sea número
+                const priceNumber = parseInt(priceText.replace(/\D/g, ''), 10) || 0;
+                
                 entry.target.dataset.animated = 'true';
                 animatePriceValue(entry.target, 0, priceNumber, 1500);
             }
         });
     }, { threshold: 0.5 });
 
-    // Observar estadísticas para animarlas
     document.querySelectorAll('.stat-item h4').forEach((stat, index) => {
         const observer = new IntersectionObserver(function(entries) {
             entries.forEach(entry => {
