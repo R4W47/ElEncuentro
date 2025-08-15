@@ -1,4 +1,4 @@
-// ===== INICIALIZACIÓN AL CARGAR EL DOM =====
+// ===== INICIALIZACIÃ"N AL CARGAR EL DOM =====
 document.addEventListener('DOMContentLoaded', function() {
     initSmoothScrolling();
     initMobileMenu();
@@ -9,11 +9,11 @@ document.addEventListener('DOMContentLoaded', function() {
     initParallaxEffect();
     initHeaderScrollEffect();
     
-    console.log('⚡ Distribuidora El Encuentro - Sistema cargado correctamente');
-    console.log('📱 Para consultas: https://wa.me/50683149916');
+    console.log('âš¡ Distribuidora El Encuentro - Sistema cargado correctamente');
+    console.log('ðŸ"± Para consultas: https://wa.me/50683149916');
 });
 
-// ===== NAVEGACIÓN SUAVE =====
+// ===== NAVEGACIÃ"N SUAVE =====
 function initSmoothScrolling() {
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
@@ -29,7 +29,7 @@ function initSmoothScrolling() {
                     behavior: 'smooth'
                 });
 
-                // Cerrar menú móvil si está abierto
+                // Cerrar menÃº mÃ³vil si estÃ¡ abierto
                 const navLinks = document.querySelector('.nav-links');
                 if (navLinks.classList.contains('mobile-open')) {
                     navLinks.classList.remove('mobile-open');
@@ -67,7 +67,7 @@ function initHeaderScrollEffect() {
     });
 }
 
-// ===== MENÚ MÓVIL =====
+// ===== MENÃš MÃ"VIL =====
 function initMobileMenu() {
     const mobileMenuBtn = document.querySelector('.mobile-menu');
     const navLinks = document.querySelector('.nav-links');
@@ -77,7 +77,7 @@ function initMobileMenu() {
             e.stopPropagation();
             navLinks.classList.toggle('mobile-open');
             
-            // Cambiar icono del botón
+            // Cambiar icono del botÃ³n
             const icon = mobileMenuBtn.querySelector('i');
             if (navLinks.classList.contains('mobile-open')) {
                 icon.className = 'fas fa-times';
@@ -88,7 +88,7 @@ function initMobileMenu() {
             }
         });
 
-        // Cerrar menú al hacer clic en enlaces
+        // Cerrar menÃº al hacer clic en enlaces
         navLinks.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', function() {
                 navLinks.classList.remove('mobile-open');
@@ -98,7 +98,7 @@ function initMobileMenu() {
             });
         });
 
-        // Cerrar menú al hacer clic fuera
+        // Cerrar menÃº al hacer clic fuera
         document.addEventListener('click', function(e) {
             if (!mobileMenuBtn.contains(e.target) && !navLinks.contains(e.target)) {
                 navLinks.classList.remove('mobile-open');
@@ -135,7 +135,7 @@ function initScrollAnimations() {
         observer.observe(item);
     });
 
-    // Observar estadísticas
+    // Observar estadÃ­sticas
     document.querySelectorAll('.stat-item').forEach((item, index) => {
         item.style.opacity = '0';
         item.style.transform = 'translateX(-30px)';
@@ -165,7 +165,7 @@ function initParallaxEffect() {
     });
 }
 
-// ===== ANIMACIÓN DE CONTADOR PARA ESTADÍSTICAS =====
+// ===== ANIMACIÃ"N DE CONTADOR PARA ESTADÃSTICAS =====
 function animateCounter(element, start, end, duration) {
     let startTimestamp = null;
     const step = (timestamp) => {
@@ -188,20 +188,55 @@ function animateCounter(element, start, end, duration) {
     window.requestAnimationFrame(step);
 }
 
-// ===== ANIMACIÓN DE PRECIOS =====
+// ===== FUNCIÓN PARA EXTRAER NÚMEROS DE PRECIOS =====
+function extractPriceNumber(priceText) {
+    // Remover símbolos de moneda y espacios, mantener solo números y comas/puntos
+    const cleanText = priceText.replace(/[₡$]/g, '').trim();
+    
+    // Buscar patrones de números con separadores
+    const patterns = [
+        /(\d{1,3}(?:,\d{3})+)/, // Formato: 1,000 o 10,000
+        /(\d{1,3}(?:\.\d{3})+)/, // Formato: 1.000 o 10.000
+        /(\d+)/                  // Cualquier secuencia de dígitos
+    ];
+    
+    for (let pattern of patterns) {
+        const match = cleanText.match(pattern);
+        if (match) {
+            // Remover separadores y convertir a número
+            const numberStr = match[1].replace(/[,\.]/g, '');
+            const number = parseInt(numberStr);
+            if (!isNaN(number) && number > 0) {
+                return number;
+            }
+        }
+    }
+    
+    return null;
+}
+
+// ===== ANIMACIÃ"N DE PRECIOS (CORREGIDA) =====
 function initPriceAnimations() {
     const priceObserver = new IntersectionObserver(function(entries) {
         entries.forEach(entry => {
             if (entry.isIntersecting && !entry.target.dataset.animated) {
                 const priceText = entry.target.textContent;
-                const priceNumber = parseInt(priceText.replace(/[₡,\s]/g, ''));
-                entry.target.dataset.animated = 'true';
-                animatePriceValue(entry.target, 0, priceNumber, 1500);
+                const priceNumber = extractPriceNumber(priceText);
+                
+                if (priceNumber !== null) {
+                    entry.target.dataset.animated = 'true';
+                    entry.target.dataset.originalFormat = priceText;
+                    animatePriceValue(entry.target, 0, priceNumber, 1500, priceText);
+                } else {
+                    console.warn('No se pudo extraer un número válido de:', priceText);
+                    // Mantener el texto original sin animación
+                    entry.target.dataset.animated = 'true';
+                }
             }
         });
     }, { threshold: 0.5 });
 
-    // Observar estadísticas para animarlas
+    // Observar estadÃ­sticas para animarlas
     document.querySelectorAll('.stat-item h4').forEach((stat, index) => {
         const observer = new IntersectionObserver(function(entries) {
             entries.forEach(entry => {
@@ -230,21 +265,48 @@ function initPriceAnimations() {
     });
 }
 
-function animatePriceValue(element, start, end, duration) {
+function animatePriceValue(element, start, end, duration, originalFormat) {
+    // Verificar que end sea un número válido
+    if (isNaN(end) || end <= 0) {
+        console.error('Valor de precio inválido:', end);
+        return;
+    }
+
     let startTimestamp = null;
+    
     const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
         const currentValue = Math.floor(progress * (end - start) + start);
-        element.innerHTML = `Desde ₡${currentValue.toLocaleString()}`;
+        
+        // Mantener el formato original pero actualizar el número
+        if (originalFormat.toLowerCase().includes('desde')) {
+            element.innerHTML = `Desde ₡${currentValue.toLocaleString()}`;
+        } else if (originalFormat.includes('₡')) {
+            element.innerHTML = `₡${currentValue.toLocaleString()}`;
+        } else if (originalFormat.includes('$')) {
+            element.innerHTML = `$${currentValue.toLocaleString()}`;
+        } else {
+            // Para otros formatos, intentar mantener la estructura original
+            const words = originalFormat.split(' ');
+            const newWords = words.map(word => {
+                if (/\d/.test(word)) {
+                    return currentValue.toLocaleString();
+                }
+                return word;
+            });
+            element.innerHTML = newWords.join(' ');
+        }
+        
         if (progress < 1) {
             window.requestAnimationFrame(step);
         }
     };
+    
     window.requestAnimationFrame(step);
 }
 
-// ===== EFECTOS DE CARGA PARA IMÁGENES =====
+// ===== EFECTOS DE CARGA PARA IMÃGENES =====
 function initImageLoadingEffects() {
     const images = document.querySelectorAll('.product-item img');
     
@@ -300,7 +362,7 @@ function initImageLoadingEffects() {
     });
 }
 
-// ===== BOTÓN SCROLL TO TOP =====
+// ===== BOTÃ"N SCROLL TO TOP =====
 function createScrollToTopButton() {
     const scrollBtn = document.createElement('button');
     scrollBtn.innerHTML = '<i class="fas fa-arrow-up"></i>';
@@ -355,7 +417,7 @@ function createScrollToTopButton() {
 }
 
 // ===== EFECTOS ADICIONALES =====
-// Efecto de typing para el título hero
+// Efecto de typing para el tÃ­tulo hero
 function typeWriter(element, text, speed = 100) {
     let i = 0;
     element.textContent = '';
@@ -370,7 +432,7 @@ function typeWriter(element, text, speed = 100) {
     type();
 }
 
-// Efecto de partículas en el hero (opcional)
+// Efecto de partÃ­culas en el hero (opcional)
 function initParticleEffect() {
     const hero = document.querySelector('.hero');
     if (!hero) return;
@@ -393,7 +455,7 @@ function initParticleEffect() {
         hero.appendChild(particle);
     }
 
-    // Agregar animación de partículas
+    // Agregar animaciÃ³n de partÃ­culas
     if (!document.querySelector('#particle-style')) {
         const style = document.createElement('style');
         style.id = 'particle-style';
@@ -423,7 +485,7 @@ function throttle(func, wait) {
 
 // Aplicar throttle a eventos de scroll costosos
 window.addEventListener('scroll', throttle(function() {
-    // Aquí puedes agregar más efectos de scroll si es necesario
+    // AquÃ­ puedes agregar mÃ¡s efectos de scroll si es necesario
 }, 16)); // ~60fps
 
 // ===== INTERACCIONES AVANZADAS =====
@@ -435,6 +497,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Inicializar efecto de partículas (opcional - descomenta si lo deseas)
+    // Inicializar efecto de partÃ­culas (opcional - descomenta si lo deseas)
     // initParticleEffect();
 });
